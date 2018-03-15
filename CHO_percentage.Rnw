@@ -93,15 +93,15 @@ JT.theme <- theme(panel.border = element_rect(fill = NA, colour = "gray10"),
 \section{Inladen data}
 
 <<label=data_inlees,fig=TRUE,include=FALSE, echo=FALSE>>=
-hogescholen <- read.csv("Data/hogescholen.csv", header=FALSE, sep=";",col.names=c("Naam","Instelling","Locatie","Onderwijstaal"), dec=",", na.strings="NA", stringsAsFactors = TRUE)
-universiteiten_bach <- read.csv("Data/universiteiten_bach.csv", header=FALSE, sep=";",col.names=c("Naam","Instelling","Locatie","Onderwijstaal"), dec=",", na.strings="NA", stringsAsFactors = TRUE)
-universiteiten_mast <- read.csv("Data/universiteiten_mast.csv", header=FALSE, sep=";",col.names=c("Naam","Instelling","Locatie","Onderwijstaal"), dec=",", na.strings="NA", stringsAsFactors = TRUE)
+hogescholen <- read.csv("Data/HOR_hogescholen.csv", header=FALSE, sep=";",col.names=c("Aantal_vest", "Naam","Instelling","Locatie","Onderwijstaal","Type"), dec=",", na.strings="NA", stringsAsFactors = TRUE)
+universiteiten_bach <- read.csv("Data/HOR_universiteiten_bach.csv", header=FALSE, sep=";",col.names=c("Aantal_vest","Naam","Instelling","Locatie","Onderwijstaal","Type"), dec=",", na.strings="NA", stringsAsFactors = TRUE)
+universiteiten_mast <- read.csv("Data/HOR_universiteiten_mast.csv", header=FALSE, sep=";",col.names=c("Aantal_vest","Naam","Instelling","Locatie","Onderwijstaal","Type"), dec=",", na.strings="NA", stringsAsFactors = TRUE)
 @
 
 <<>>=
-hogescholen %>% group_by(Onderwijstaal) %>% count()
-universiteiten_bach %>% group_by(Onderwijstaal) %>% count()
-universiteiten_mast %>% group_by(Onderwijstaal) %>% count()
+hogescholen %>% filter(Type=="initieel") %>% summarise(aantal_vest_init_prof_bach=sum(Aantal_vest))
+universiteiten_bach %>% filter(Type=="initieel") %>% summarise(aantal_vest_init_acad_bach=sum(Aantal_vest))
+universiteiten_mast %>% filter(Type=="initieel") %>% summarise(aantal_vest_init_mast=sum(Aantal_vest))
 @
 
 
