@@ -99,9 +99,20 @@ universiteiten_mast <- read.csv("Data/HOR_universiteiten_mast.csv", header=FALSE
 @
 
 <<>>=
-hogescholen %>% filter(Type=="initieel") %>% summarise(aantal_vest_init_prof_bach=sum(Aantal_vest))
-universiteiten_bach %>% filter(Type=="initieel") %>% summarise(aantal_vest_init_acad_bach=sum(Aantal_vest))
-universiteiten_mast %>% filter(Type=="initieel") %>% summarise(aantal_vest_init_mast=sum(Aantal_vest))
+hogescholen %>% 
+  filter(Type=="initieel") %>% 
+  group_by(Instelling) %>% 
+  summarise(sum(Aantal_vest)) %>%
+  View()
+universiteiten_bach %>% 
+  filter(!grepl("Universiteit",as.character(Instelling)) & Type=="initieel") %>% 
+  group_by(Instelling) %>% summarise(sum(Aantal_vest))
+universiteiten_bach %>% 
+  filter(grepl("Universiteit",as.character(Instelling)) & Type=="initieel") %>% 
+  group_by(Instelling) %>% summarise(sum(Aantal_vest))
+universiteiten_mast %>% 
+  filter(grepl("Universiteit",as.character(Instelling)) & Type=="initieel") %>% 
+  group_by(Instelling) %>% summarise(sum(Aantal_vest))
 @
 
 
