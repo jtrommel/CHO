@@ -51,7 +51,7 @@
 \usepackage{makeidx}
 \makeindex
 
-\title{CHO}
+\title{Analyse van de lijst bachelor- en masteropleidingen - BVR 30 maart 2018}
 \author{Jan Trommelmans}
 
 \begin{document}
@@ -61,7 +61,7 @@
 <<echo=FALSE>>=
 library(tidyverse)
 library(gridExtra)
-library(scatterplot3d)
+library(broom)
 @
 
 % Setting the ggplot theme:
@@ -88,32 +88,170 @@ JT.theme <- theme(panel.border = element_rect(fill = NA, colour = "gray10"),
 \chapter*{CHO}
 
 \mainmatter
-\chapter{Percentage engelstalige opleidingen}
+\chapter{Inladen en aanvullen van de lijst}
 
 \section{Inladen data}
 
-<<label=data_inlees,fig=TRUE,include=FALSE, echo=FALSE>>=
-hogescholen <- read.csv("Data/HOR_hogescholen.csv", header=FALSE, sep=";",col.names=c("Aantal_vest", "Naam","Instelling","Locatie","Onderwijstaal","Type"), dec=",", na.strings="NA", stringsAsFactors = TRUE)
-universiteiten_bach <- read.csv("Data/HOR_universiteiten_bach.csv", header=FALSE, sep=";",col.names=c("Aantal_vest","Naam","Instelling","Locatie","Onderwijstaal","Type"), dec=",", na.strings="NA", stringsAsFactors = TRUE)
-universiteiten_mast <- read.csv("Data/HOR_universiteiten_mast.csv", header=FALSE, sep=";",col.names=c("Aantal_vest","Naam","Instelling","Locatie","Onderwijstaal","Type"), dec=",", na.strings="NA", stringsAsFactors = TRUE)
+<<echo=FALSE>>=
+lijst.df <- read.csv("./Data/Lijst2018_R.csv", header=TRUE, na.strings=(""))
 @
 
+\section{Bewerkingen}
+\subsection{Oplijsten en daarna verwijderen van onvolledige rijen}
+
 <<>>=
-hogescholen %>% 
-  filter(Type=="initieel") %>% 
-  group_by(Instelling) %>% 
-  summarise(sum(Aantal_vest)) %>%
-  View()
-universiteiten_bach %>% 
-  filter(!grepl("Universiteit",as.character(Instelling)) & Type=="initieel") %>% 
-  group_by(Instelling) %>% summarise(sum(Aantal_vest))
-universiteiten_bach %>% 
-  filter(grepl("Universiteit",as.character(Instelling)) & Type=="initieel") %>% 
-  group_by(Instelling) %>% summarise(sum(Aantal_vest))
-universiteiten_mast %>% 
-  filter(grepl("Universiteit",as.character(Instelling)) & Type=="initieel") %>% 
-  group_by(Instelling) %>% summarise(sum(Aantal_vest))
+lijst.df %>% select(Instelling, Graad.en.kwalificatie) %>% filter(!complete.cases(lijst.df))
+lijst.df <- lijst.df[complete.cases(lijst.df),]
 @
+
+\subsection{Controle op de totalen}
+
+\newthought{totaal}
+
+totaal = \Sexpr{nrow(lijst.df)}
+
+\newthought{Bachelors en Masters}
+
+aantal bacheloropleidingen = \Sexpr{lijst.df %>% filter(grepl("Bachelor", as.character(Graad.en.kwalificatie))) %>% nrow()}
+
+aantal masteropleidingen = \Sexpr{lijst.df %>% filter(grepl("Master", as.character(Graad.en.kwalificatie))) %>% nrow()}
+
+\newthought{Professioneel en Academisch}
+<<>>=
+lijst.df %>% group_by(type) %>% summarise(n=n())
+@
+
+\newthought{Taal}
+<<>>=
+lijst.df %>% group_by(taal) %>% summarise(n=n())
+@
+
+\subsection{Aanvullen van de benamingen van de opleidingen}
+
+Uitbreiden op basis van de kolom ''initieel" naar de kolom ''groep":
+\begin{tabular}{c | c}
+''J" + bachelor in 'Graad.en.kwalificatie' + ''P" in 'type' & ''Init.Prof.Bach" \\
+''J" + bachelor in 'Graad.en.kwalificatie' + ''A" in 'type' & ''Init.Acad.Bach" \\
+''J" + master in 'Graad.en.kwalificatie' & ''Init.Mast" \\
+''B" & ''Banaba" \\
+''M" & ''Manama" \\
+''IM" & ''Internat.Master" \\
+''EM" & ''European.Master" \\
+''JM" & ''Joint.Master" \\
+''R" & ''Research.Master"
+\end{tabular}
+
+<<>>=
+lijst.df$groep <- 0
+lijst.df$groep[lijst.df$initieel=="J" & 
+                 grepl("Bachelor", as.character(lijst.df$Graad.en.kwalificatie)) &
+                 lijst.df$type=="P"] <- "Init.Prof.Bach"
+lijst.df$groep[lijst.df$initieel=="J" & 
+                 grepl("Bachelor", as.character(lijst.df$Graad.en.kwalificatie)) &
+                 lijst.df$type=="A"] <- "Init.Acad.Bach"
+lijst.df$groep[lijst.df$initieel=="J" & 
+                 grepl("Master", as.character(lijst.df$Graad.en.kwalificatie))] <- "Init.Mast"
+lijst.df$groep[lijst.df$initieel=="B"] <- "Banaba"
+lijst.df$groep[lijst.df$initieel=="M"] <- "Manama"
+lijst.df$groep[lijst.df$initieel=="IM"] <- "Internat.Master"
+lijst.df$groep[lijst.df$initieel=="EM"] <- "European.Master"
+lijst.df$groep[lijst.df$initieel=="JM"] <- "Joint.Master"
+lijst.df$groep[lijst.df$initieel=="R"] <- "Research.Mast"
+@
+
+\section{Tellingen}
+
+\subsection{Aantal opleidingen zonder rekening te houden met afstudeerrichtingen per instelling}
+
+<<>>=
+lijst.df %>% 
+  group_by(Instelling) %>% 
+  summarize(n_unique = n_distinct(Graad.en.kwalificatie)) -> overzicht.opl
+overzicht.opl
+sum(overzicht.opl$n_unique)
+lijst.df %>% 
+  group_by(Instelling, groep) %>% 
+  summarize(n_unique = n_distinct(Graad.en.kwalificatie)) -> overzicht.tot
+overzicht.tot %>% group_by(groep) %>% summarise(som=sum(n_unique))
+@
+
+\subsection{Aantal initiële prof. bacheloropleidingen per instelling (zonder rekening te houden met afstudeerrichtingen) per taalgroep}
+
+<<>>=
+lijst.df %>%
+  filter(groep=="Init.Prof.Bach") %>%
+  group_by(Instelling, taal) %>% 
+  summarize(n_unique = n_distinct(Graad.en.kwalificatie)) %>% 
+  filter(taal=="N") %>% 
+  summarise(som=sum(n_unique)) -> overzicht.opl
+Init.Prof.Bach.N <- sum(overzicht.opl$som)
+Init.Prof.Bach.N
+lijst.df %>%
+  filter(groep=="Init.Prof.Bach") %>%
+  group_by(Instelling, taal) %>% 
+  summarize(n_unique = n_distinct(Graad.en.kwalificatie)) %>% 
+  filter(taal=="E") %>% 
+  summarise(som=sum(n_unique)) -> overzicht.opl
+Init.Prof.Bach.E <- sum(overzicht.opl$som)
+Init.Prof.Bach.E
+@
+
+\subsection{Aantal initiële acad. bacheloropleidingen per instelling (zonder rekening te houden met afstudeerrichtingen) per taalgroep}
+
+<<>>=
+lijst.df %>%
+  filter(groep=="Init.Acad.Bach") %>%
+  group_by(Instelling, taal) %>% 
+  summarize(n_unique = n_distinct(Graad.en.kwalificatie)) %>% 
+  filter(taal=="N") %>% 
+  summarise(som=sum(n_unique)) -> overzicht.opl
+Init.Acad.Bach.N <- sum(overzicht.opl$som)
+Init.Acad.Bach.N
+lijst.df %>%
+  filter(groep=="Init.Acad.Bach") %>%
+  group_by(Instelling, taal) %>% 
+  summarize(n_unique = n_distinct(Graad.en.kwalificatie)) %>% 
+  filter(taal=="E") %>% 
+  summarise(som=sum(n_unique)) -> overzicht.opl
+Init.Acad.Bach.E <- sum(overzicht.opl$som)
+Init.Acad.Bach.E
+@
+
+\subsection{Aantal initiële acad. masteropleidingen per instelling (zonder rekening te houden met afstudeerrichtingen) per taalgroep}
+
+<<>>=
+lijst.df %>%
+  filter(groep=="Init.Mast") %>%
+  group_by(Instelling, taal) %>% 
+  summarize(n_unique = n_distinct(Graad.en.kwalificatie)) %>% 
+  filter(taal=="N") %>% 
+  summarise(som=sum(n_unique)) -> overzicht.opl
+Init.Mast.N <- sum(overzicht.opl$som)
+Init.Mast.N
+lijst.df %>%
+  filter(groep=="Init.Mast") %>%
+  group_by(Instelling, taal) %>% 
+  summarize(n_unique = n_distinct(Graad.en.kwalificatie)) %>% 
+  filter(taal=="E") %>% 
+  summarise(som=sum(n_unique)) -> overzicht.opl
+Init.Mast.E <- sum(overzicht.opl$som)
+Init.Mast.E
+@
+% <<echo=FALSE>>=
+% hogescholen %>% 
+%   filter(groep=="initieel") %>% 
+%   group_by(Instelling) %>% 
+%   summarise(sum(Aantal_vest))
+% universiteiten_bach %>% 
+%   filter(!grepl("Universiteit",as.character(Instelling)) & Type=="initieel") %>% 
+%   group_by(Instelling) %>% summarise(sum(Aantal_vest))
+% universiteiten_bach %>% 
+%   filter(grepl("Universiteit",as.character(Instelling)) & Type=="initieel") %>% 
+%   group_by(Instelling) %>% summarise(sum(Aantal_vest))
+% universiteiten_mast %>% 
+%   filter(grepl("Universiteit",as.character(Instelling)) & Type=="initieel") %>% 
+%   group_by(Instelling) %>% summarise(sum(Aantal_vest))
+% @
 
 
 \newpage
