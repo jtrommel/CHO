@@ -88,9 +88,23 @@ JT.theme <- theme(panel.border = element_rect(fill = NA, colour = "gray10"),
 \chapter*{Commissie Hoger Onderwijs: berekening van het percentage anderstalige initi\"{e}le bachelor- en masteropleidingen}
 
 \mainmatter
-\chapter{Analyse van de lijst bachelor- en masteropleidingen - BVR 30 maart 2018} 
+\chapter{Lijst bachelor- en masteropleidingen - BVR 30 maart 2018} 
 
-Bron: besluit van de Vlaamse Regering (goedgekeurd 30 maart 2018, B.S. 20/04/2018)
+De lijst die decretaal vastligt wordt bepaald door het ''Besluit van de Vlaamse Regering (goedgekeurd 30 maart 2018, B.S. 20/04/2018)". Deze lijst heeft volgende voor- en nadelen:
+\begin{itemize}
+  \item Voordelen:
+    \begin{enumerate}
+      \item het vormt de \emph{decretale basis}
+      \item de inhoud ligt vast vanaf de publicatie. Aangezien die gebeurt begin april van jaar 20XX is dit 5 maand voor de indiendatum voor aanvragen voor anderstalige opleidingen. Dat geeft ruim tijd voor het eenduidig vaststellen van het huidige percentage anderstalige opleidingen
+    \end{enumerate}
+  \item Nadelen:
+    \begin{enumerate}
+      \item de lijst is enkel (?) beschikbaar in pdf-formaat in het Staatsblad. Omzetting naar een databestand vraagt een aanzienlijke tijdsinvestering
+      \item de lijst is in zijn basisvorm ongeschikt voor het bepalen van de percentages initi\"{e}le bachelor- en masteropleidingen in andere talen dan het Nederlands. De ontbrekende informatie moet manueel toegevoegd worden. Het gaat over: het onderscheid ''initi\"{e}le" opleiding of niet, het onderscheid bachelor/master, het onderscheid professionele of academische opleiding, of een opleiding al of niet behoort tot de decretaal toegestane uitzonderingen (zoals Internationale masters, European masters, Joint masters, Research masters). De manuele toevoeging van deze informatie kan leiden tot fouten in de database. Het is bovendien tijdsintensief.
+    \end{enumerate}
+\end{itemize}
+
+De publicatie van het BVR is omgezet in een Excel-bestand (BVR2018.xlsx).
 
 \section{Inladen data}
 
@@ -101,13 +115,15 @@ lijst.df <- read.csv("./Data/Lijst2018_R.csv", header=TRUE, na.strings=(""))
 \section{Bewerkingen}
 \subsection{Verwijderen van onvolledige rijen}
 
+18 opleidingen die in het BVR staan kunnen niet met zekerheid voorzien worden van de bijkomende informatie. Het gaat vooral over masteropleidingen waar het niet duidelijk is of die nog worden ingericht, op welke vestigingsplaats, in welke taal. Deze worden uit het bestand verwijderd. Dat maakt dat het aantal masteropleidingen niet exact gekend is, maar dat heeft niet zo'n groot belang omdat het grenspercentage ''anderstalige initi\"{e}le opleidingen daar nog niet in zicht is.
+
 <<echo=FALSE>>=
 lijst.df <- lijst.df[complete.cases(lijst.df),]
 @
 
 \subsection{Uitbreiden op basis van de kolom ''initieel" naar nieuwe kolom ''groep"}
 
-De generatie van de groepsnamen gebeurt als volgt:
+Om meer detail in de telling mogelijk te maken wordt een bijkomende kolom ''groep" aangemaakt. De generatie van de groepsnamen gebeurt als volgt:
 
 \begin{tabular}{c | c}
 ''J" + bachelor in 'Graad.en.kwalificatie' + ''P" in 'type' & ''Init.Prof.Bach" \\
@@ -140,13 +156,15 @@ lijst.df$groep[lijst.df$initieel=="R"] <- "Research.Mast"
 @
 
 \newpage
-\section{Controle op de totalen}
+\section{Controles}
 
-\subsection{Totaal aantal rijen}
+De consistentie van de dataset ''BVR2018" wordt gecontroleerd met telling van totalen en deeltotalen.
+
+\subsection{Controle van het totaal aantal rijen}
 
 totaal = \Sexpr{nrow(lijst.df)}
 
-\subsection{Bachelor- en Masteropleidingen (afstudeerrichtingen inbegrepen)}
+\subsection{Controle van het aantal Bachelor- en Masteropleidingen (afstudeerrichtingen inbegrepen)}
 <<echo=FALSE>>=
 n_Bach <- lijst.df %>% filter(grepl("Bachelor", as.character(Graad.en.kwalificatie))) %>% nrow()
 n_Mast <- lijst.df %>% filter(grepl("Master", as.character(Graad.en.kwalificatie))) %>% nrow()
@@ -159,8 +177,9 @@ aantal Masteropleidingen & \Sexpr{n_Mast}\\
 Totaal & \Sexpr{n_Bach + n_Mast}
 \end{tabular}
 
-\subsection{Unieke Bachelor- en Masteropleidingen (afstudeerrichtingen niet inbegrepen)}
+\subsection{Controle van het aantal unieke Bachelor- en Masteropleidingen (afstudeerrichtingen niet inbegrepen) per vestiging}
 
+De telling gebeurt op basis van ''unieke" opleidingen. D.w.z. dat een opleiding die 3 afstudeerrichtigen, en \'{e}\'{e}n vestigingsplaats heeft, slecht \'{e}\'{e}nmaal geteld wordt. Een opleiding met 3 afstudeerrichtingen waarvan er 2 op vestiging A gegeven worden, en 1 op vestiging B, wordt 2 keer geteld.
 <<echo=FALSE>>=
 lijst.df %>%
   filter(groep=="Init.Prof.Bach") %>%
@@ -241,10 +260,13 @@ aantal unieke initi\"{e}le Acad. bacheloropleidingen & \Sexpr{n_Init.Acad.Bach_u
  &  & aantal unieke Research Masters & \Sexpr{n_Research.Master_u}\\
 aantal unieke Banaba's & \Sexpr{n_Banaba_u} & aantal unieke Manama's & \Sexpr{n_Manama_u}\\
  \hline
- aantal unieke Bacheloropleidingen & \Sexpr{n_Bach_u} & aantal unieke Masteropleidingen & \Sexpr{n_Mast_u}
+aantal unieke Bacheloropleidingen & \Sexpr{n_Bach_u} & aantal unieke Masteropleidingen & \Sexpr{n_Mast_u} \\
+\hline
+Totaal unieke opleidingen & \Sexpr{n_Bach_u + n_Mast_u} &  &
 \end{tabular}
 
-\subsection{Unieke Professionele en Academische opleidingen}
+\subsection{Controle van het aantal unieke Professionele en Academische opleidingen per vestiging}
+
 <<echo=FALSE>>=
 n_Prof <- lijst.df %>% filter(type=="P") %>% nrow()
 lijst.df %>%
@@ -269,7 +291,24 @@ aantal unieke Academische opleidingen & \Sexpr{n_Acad_u} & = \Sexpr{n_Init.Acad.
 Totaal & \Sexpr{n_Prof_u + n_Acad_u}
 \end{tabular}
 
-\section{Vergelijking met het Hoger Onderwijs Register}
+\chapter{Het Hoger Onderwijs Register} 
+
+Het Hoger Onderwijs Register is toegankelijk voor opzoekwerk via het web. Het heeft volgende voor- en nadelen:
+
+\begin{itemize}
+  \item Voordelen:
+    \begin{enumerate}
+      \item het is sterk verbeterd t.o.v. vorige versie
+      \item het opvragen van de gegevens die nodig zijn voor het berekenen van het percentage anderstalige initi\"{e}le bachelor- en masteropleidin\-gen kan snel gebeuren (minder dan een uur)
+    \end{enumerate}
+  \item Nadelen:
+    \begin{enumerate}
+      \item de achterliggende database is niet beschikbaar zodat controle op consistentie niet mogelijk is
+      \item er is manueel werk nodig: de cijfers van de opzoekacties moeten apart genoteerd en verwerkt worden, in de academische opleidingen (bachelor en master) wordt ook het aanbod van andere instellingen (Vesaliusinstituut, Europacollege, Antwerp Management School ...) opgenomen. Om de resultaten van het HOR vergelijkbaar te maken moet men voor de academische opleidingen, met de hand, de triage maken zodat we cijfers krijgen die enkel de Katholieke Universiteit Leuven, de Universiteit Antwerpen, de Universiteit Gent, de Universiteit Hasselt en de Vrije Universiteit Brussel betreffen. Het zijn enkel die instellingen die in het BVR opgesomd worden.
+    \end{enumerate}
+\end{itemize}
+
+\section{Vergelijking van de data van BVR en HOR}
 
 \begin{tabular}{l | r | r}
  & BVR & HOR \\
@@ -281,8 +320,32 @@ aantal unieke Masteropleidingen & \Sexpr{n_Init.Mast_u} & 537 \\
 Totaal & \Sexpr{n_Init.Prof.Bach_u + n_Init.Acad.Bach_u + n_Init.Mast_u} & \Sexpr{sum(c(345, 244, 537))}
 \end{tabular}
 
-\section{Onderwijstaal}
-\subsection{Op basis van BVR}
+De verschillen tussen BVR en HOR lijken aanzienlijk. Twee elementen zijn vooral van invloed:
+\begin{itemize}
+  \item de prof. bacheloropleiding verpleegkunde: HOR telt de opleidingen van 180 STP en 240 STP apart (soms zelfs een bijkomende opleiding van 120 STP). Daardoor zijn er in het HOR 46 initi\"{e}le opleidingen ''Bachelor in de verpleegkunde". Het BVR heeft er 18. De keuze i.v.m. de telmethode voor de opleiding ''Verpleegkunde" is dus belangrijk.
+  \item initi\"{e}le academische bacheloropleidingen. het HOR telt hier ook de opleidingen van bv. het Vesaliusinstituut, Tropisch Instituut, Vlerick School, Europacollege ... bij. Wanneer we ons beperken tot de Katholieke Universiteit Leuven, de Universiteit Antwerpen, de Universiteit Gent, de Universiteit Hasselt en de Vrije Universiteit Brussel dan daalt het aantal initi\"{e}le masteropleidingen tot 212. Dat is \emph{minder} dan de telling van het BVR! De oorzaak hiervan is nog niet duidelijk.
+  \item init. masteropleidingen: idem als bij de academische bachelors. Dit wordt veroorzaakt door 18 masteropleidingen die opgenomen zijn in het BVR maar niet terug te vinden zijn in het HOR.
+\end{itemize}
+
+Wanneer we de telling gebaseerd op het BVR voor de professionele initi\"{e}le bacheloropleidingen aanpassen voor wat betreft verpleegkunde (van 18 naar 46), de tellingen van het HOR voor de academische initi\"{e}le bachelor- en masteropleidingen beperken tot de universiteiten die opgesomd worden in het BVR dan krijgen we volgende tabel:
+
+\begin{tabular}{l | r | r}
+ & BVR & HOR gecorrigeerd \\
+\hline
+aantal unieke Prof. Bacheloropleidingen & \Sexpr{n_Init.Prof.Bach_u} + 28 = 346  & 345 \\
+aantal unieke Acad. Bacheloropleidingen & \Sexpr{n_Init.Acad.Bach_u} & 212 \\
+aantal unieke Masteropleidingen & \Sexpr{n_Init.Mast_u} & 491 \\
+\hline
+Totaal & \Sexpr{n_Init.Prof.Bach_u + n_Init.Acad.Bach_u + n_Init.Mast_u} & \Sexpr{sum(c(345, 212, 491))}
+\end{tabular}
+
+Die cijfers liggen behoorlijk dicht bij elkaar wat vertrouwen geeft in de nauwkeurigheid van dataset ''BVR2108".
+
+\chapter{Tellingen m.b.t. de onderwijstaal}
+
+\section{Op basis van BVR}
+
+Gebruik makend van dataset ''BVR208" kunnen we taaltellingen doen en percentages uitrekenen.
 <<echo=FALSE>>=
 lijst.df %>%
   filter(groep=="Init.Prof.Bach") %>%
@@ -325,7 +388,92 @@ unieke Bacheloropleidingen & \Sexpr{n_Init.Prof.Bach.N_u + n_Init.Acad.Bach.N_u}
 unieke Masteropleidingen & \Sexpr{n_Init.Mast.N_u} & \Sexpr{n_Init.Mast.E_u} & \Sexpr{n_Init.Mast.N_u +  n_Init.Mast.E_u} & \Sexpr{p_Init.Mast.E_u}
 \end{tabular}
 
-\subsection{Op basis van HOR}
+\section{Op basis van BVR aangepast voor verpleegkunde}
+Wanneer we voor de initi\"{e}le professionele opleiding verpleegkunde de keuze nemen die gemaakt wordt in het HOR dan wordt de tabel:
+<<echo=FALSE>>=
+n_Init.Prof.Bach.N_u <- n_Init.Prof.Bach.N_u + 28
+p_Init.Prof.Bach.E_u <- round(100*n_Init.Prof.Bach.E_u/(n_Init.Prof.Bach.N_u + n_Init.Prof.Bach.E_u),2)
+p_Init.Bach.E_u <- round(100*(n_Init.Prof.Bach.E_u + n_Init.Acad.Bach.E_u)/(n_Init.Prof.Bach.N_u + n_Init.Prof.Bach.E_u + n_Init.Acad.Bach.N_u + n_Init.Acad.Bach.E_u),2)
+@
+
+\begin{tabular}{l | r | r | r | r}
+ & Nederlands & Engels & totaal & percentage \\
+\hline
+unieke Prof. Bacheloropleidingen & \Sexpr{n_Init.Prof.Bach.N_u} & \Sexpr{n_Init.Prof.Bach.E_u} & \Sexpr{n_Init.Prof.Bach.N_u +  n_Init.Prof.Bach.E_u} & \Sexpr{p_Init.Prof.Bach.E_u}  \\
+unieke Acad. Bacheloropleidingen & \Sexpr{n_Init.Acad.Bach.N_u} & \Sexpr{n_Init.Acad.Bach.E_u} & \Sexpr{n_Init.Acad.Bach.N_u +  n_Init.Acad.Bach.E_u} & \Sexpr{p_Init.Acad.Bach.E_u}
+\\
+\hline
+unieke Bacheloropleidingen & \Sexpr{n_Init.Prof.Bach.N_u + n_Init.Acad.Bach.N_u} & \Sexpr{n_Init.Prof.Bach.E_u + n_Init.Acad.Bach.E_u} & \Sexpr{n_Init.Prof.Bach.N_u +  n_Init.Prof.Bach.E_u + n_Init.Acad.Bach.N_u +  n_Init.Acad.Bach.E_u} & \Sexpr{p_Init.Bach.E_u}
+\\
+\hline
+\hline
+unieke Masteropleidingen & \Sexpr{n_Init.Mast.N_u} & \Sexpr{n_Init.Mast.E_u} & \Sexpr{n_Init.Mast.N_u +  n_Init.Mast.E_u} & \Sexpr{p_Init.Mast.E_u}
+\end{tabular}
+
+\newpage
+\section{Gevolgen van de goedkeuring van de ingediende dossiers in 2018}
+
+Er zijn aanvragen voor:
+\begin{tabular}{l | r}
+initi\"{e}le professionele bachelors & 16 \\
+initi\"{e}le academische bachelors & 1 \\
+initi\"{e}le masters & 7
+\end{tabular}
+
+\subsection{Percentages gebaseerd op het BVR}
+
+Als de aanvragen allemaal goedgekeurd worden dan worden de aantallen en percentages:
+
+<<echo=FALSE>>=
+n_Init.Prof.Bach.N_u <- n_Init.Prof.Bach.N_u - 28
+n_Init.Prof.Bach.E_u <- n_Init.Prof.Bach.E_u + 16
+n_Init.Acad.Bach.E_u <- n_Init.Acad.Bach.E_u + 1
+n_Init.Mast.E_u <- n_Init.Mast.E_u + 7
+p_Init.Prof.Bach.E_u <- round(100*n_Init.Prof.Bach.E_u/(n_Init.Prof.Bach.N_u + n_Init.Prof.Bach.E_u),2)
+p_Init.Acad.Bach.E_u <- round(100*n_Init.Acad.Bach.E_u/(n_Init.Acad.Bach.N_u + n_Init.Acad.Bach.E_u),2)
+p_Init.Bach.E_u <- round(100*(n_Init.Prof.Bach.E_u + n_Init.Acad.Bach.E_u)/(n_Init.Prof.Bach.N_u + n_Init.Prof.Bach.E_u + n_Init.Acad.Bach.N_u + n_Init.Acad.Bach.E_u),2)
+p_Init.Mast.E_u <- round(100*n_Init.Mast.E_u/(n_Init.Mast.N_u + n_Init.Mast.E_u),2)
+@
+
+\begin{tabular}{l | r | r | r | r}
+ & Nederlands & Engels & totaal & percentage \\
+\hline
+unieke Prof. Bacheloropleidingen & \Sexpr{n_Init.Prof.Bach.N_u} & \Sexpr{n_Init.Prof.Bach.E_u} & \Sexpr{n_Init.Prof.Bach.N_u +  n_Init.Prof.Bach.E_u} & \Sexpr{p_Init.Prof.Bach.E_u}  \\
+unieke Acad. Bacheloropleidingen & \Sexpr{n_Init.Acad.Bach.N_u} & \Sexpr{n_Init.Acad.Bach.E_u} & \Sexpr{n_Init.Acad.Bach.N_u +  n_Init.Acad.Bach.E_u} & \Sexpr{p_Init.Acad.Bach.E_u}
+\\
+\hline
+unieke Bacheloropleidingen & \Sexpr{n_Init.Prof.Bach.N_u + n_Init.Acad.Bach.N_u} & \Sexpr{n_Init.Prof.Bach.E_u + n_Init.Acad.Bach.E_u} & \Sexpr{n_Init.Prof.Bach.N_u +  n_Init.Prof.Bach.E_u + n_Init.Acad.Bach.N_u +  n_Init.Acad.Bach.E_u} & \Sexpr{p_Init.Bach.E_u}
+\\
+\hline
+\hline
+unieke Masteropleidingen & \Sexpr{n_Init.Mast.N_u} & \Sexpr{n_Init.Mast.E_u} & \Sexpr{n_Init.Mast.N_u +  n_Init.Mast.E_u} & \Sexpr{p_Init.Mast.E_u}
+\end{tabular}
+
+\subsection{Percentages gebaseerd op het BVR met aanpassing voor verpleegkunde volgens HOR}
+
+Als de aanvragen allemaal goedgekeurd worden dan worden de aantallen en percentages:
+
+<<echo=FALSE>>=
+n_Init.Prof.Bach.N_u <- n_Init.Prof.Bach.N_u + 28
+p_Init.Prof.Bach.E_u <- round(100*n_Init.Prof.Bach.E_u/(n_Init.Prof.Bach.N_u + n_Init.Prof.Bach.E_u),2)
+p_Init.Acad.Bach.E_u <- round(100*n_Init.Acad.Bach.E_u/(n_Init.Acad.Bach.N_u + n_Init.Acad.Bach.E_u),2)
+p_Init.Bach.E_u <- round(100*(n_Init.Prof.Bach.E_u + n_Init.Acad.Bach.E_u)/(n_Init.Prof.Bach.N_u + n_Init.Prof.Bach.E_u + n_Init.Acad.Bach.N_u + n_Init.Acad.Bach.E_u),2)
+p_Init.Mast.E_u <- round(100*n_Init.Mast.E_u/(n_Init.Mast.N_u + n_Init.Mast.E_u),2)
+@
+
+\begin{tabular}{l | r | r | r | r}
+ & Nederlands & Engels & totaal & percentage \\
+\hline
+unieke Prof. Bacheloropleidingen & \Sexpr{n_Init.Prof.Bach.N_u} & \Sexpr{n_Init.Prof.Bach.E_u} & \Sexpr{n_Init.Prof.Bach.N_u +  n_Init.Prof.Bach.E_u} & \Sexpr{p_Init.Prof.Bach.E_u}  \\
+unieke Acad. Bacheloropleidingen & \Sexpr{n_Init.Acad.Bach.N_u} & \Sexpr{n_Init.Acad.Bach.E_u} & \Sexpr{n_Init.Acad.Bach.N_u +  n_Init.Acad.Bach.E_u} & \Sexpr{p_Init.Acad.Bach.E_u}
+\\
+\hline
+unieke Bacheloropleidingen & \Sexpr{n_Init.Prof.Bach.N_u + n_Init.Acad.Bach.N_u} & \Sexpr{n_Init.Prof.Bach.E_u + n_Init.Acad.Bach.E_u} & \Sexpr{n_Init.Prof.Bach.N_u +  n_Init.Prof.Bach.E_u + n_Init.Acad.Bach.N_u +  n_Init.Acad.Bach.E_u} & \Sexpr{p_Init.Bach.E_u}
+\\
+\hline
+\hline
+unieke Masteropleidingen & \Sexpr{n_Init.Mast.N_u} & \Sexpr{n_Init.Mast.E_u} & \Sexpr{n_Init.Mast.N_u +  n_Init.Mast.E_u} & \Sexpr{p_Init.Mast.E_u}
+\end{tabular}
 
 \newpage
 \textbf{Thanks} \\
